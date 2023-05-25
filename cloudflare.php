@@ -55,38 +55,40 @@ class CloudflareClient
 	}
 }	
 
+
+//
+// Validate Input
+//
+
 if ($argc !== 5) {
-	echo 'badparam';
-	exit();
+	exit('badparam');
 }
 
 list($cmd, $zone, $token, $hostname, $ip) = $argv;
 
 if (strpos($hostname, '.') === false) {
-	echo 'badparam';
-	exit();
+	exit('badparam');
 }
 
 if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-	echo 'badparam';
-	exit();
+	exit('badparam');
 }
+
+//
+// Main
+//
 
 $cf = new CloudflareClient($hostname, $zone, $token);
 $records = $cf->getRecords();
-var_dump($records);
-exit();
 
 if (!empty($records->errors)) {
-	echo 'badauth';
-	exit();
+	exit('badauth');
 }
 
 if (!empty($records->result)) {
 	$record = $records->result[0];
 	if ($record->content === $ip) {
-		echo 'nochg';
-		exit();
+		exit('nochg');
 	}
 	$record->content = $ip;
 	$result = $cf->updateRecord($record);
@@ -94,4 +96,4 @@ if (!empty($records->result)) {
 	$result = $cf->createRecord($ip);
 }
 
-echo $result->success? 'good' : 'badagent';
+exit($result->success? 'good' : 'badagent');
