@@ -1,8 +1,8 @@
 #!/usr/bin/php -d open_basedir=/usr/syno/bin/ddns
 <?php
 
-static API_BASE_URI = 'https://api.cloudflare.com/client/v4';
-static RECORD_TYPE = 'A';
+define('API_BASE_URI', 'https://api.cloudflare.com/client/v4');
+define('RECORD_TYPE', 'A');
 
 class Record
 {
@@ -32,14 +32,14 @@ class DnsRecordsApi
 	{
 		$ch = curl_init();
 		if ($method === 'GET') {
-			$url = $this->endpoint . '?' . http_build_query($params));
+			$url = $this->endpoint . '?' . http_build_query($params);
 		} else {
 			$url = $this->endpoint;
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
 		}
 		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 		$response = curl_exec($ch);
@@ -100,10 +100,10 @@ if (!empty($records->result)) {
 		exit('nochg');
 	}
 	$record->content = $ip;
-	$result = $api->post($record);
+	$result = $api->put($record);
 } else {
 	$record = new Record($hostname, $ip);
-	$result = $api->put($record);
+	$result = $api->post($record);
 }
 
 exit($result->success? 'good' : 'badagent');
