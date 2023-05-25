@@ -48,7 +48,7 @@ class DnsRecordsApi
 
 	public function get($hostname)
 	{
-		$params = ['type' => RECORD_TYPE, 'name' => $hostname]
+		$params = ['type' => RECORD_TYPE, 'name' => $hostname];
 		return $this->request('GET', $params);
 	}
 
@@ -72,6 +72,7 @@ if ($argc !== 5) {
 	exit('badparam');
 }
 
+// Receive from DSM
 list($cmd, $zone, $token, $hostname, $ip) = $argv;
 
 if (strpos($hostname, '.') === false) {
