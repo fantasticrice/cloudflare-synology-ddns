@@ -1,32 +1,40 @@
 #!/usr/bin/php -d open_basedir=/usr/syno/bin/ddns
 <?php
 
-const API_RECORD_TYPE = 'A';
-const API_BASE_URL = 'https://api.cloudflare.com/client/v4';
+static API_BASE_URI = 'https://api.cloudflare.com/client/v4';
+static RECORD_TYPE = 'A';
 
-class CloudflareClient
+class Record
 {
-	private $hostname;
-	private $zone;
-	private $token;
+	public $content;
+	public $name;
+	public $type = RECORD_TYPE;
 
-	public function __construct($hostname, $zone, $token)
+	public function __construct($hostname, $ip)
 	{
-		$this->hostname = $hostname;
-		$this->zone = $zone;
-		$this->token = $token;
-	}	
+		$this->content = $ip;
+		$this->name = $hostname;
+	}
+}
 
-	private function request($method = 'GET', $params = null)
+class DnsRecordsApi
+{
+	private $endpoint;
+	private $headers = ['Content-Type: application/json'];
+
+	public function __construct($zone, $token)
+	{
+		$this->endpoint = sprintf(API_BASE_URI . '/zones/%s/dns_records', $zone);
+		$this->headers[] = 'Authorization: Bearer ' . $token;
+	}
+
+	private function request($method, $params)
 	{
 		$ch = curl_init();
-		$url = sprintf(API_BASE_URL . '/zones/%s/dns_records', $this->zone);
-		$headers = ['Content-Type: application/json', 'Authorization: Bearer ' . $this->token];
-
 		if ($method === 'GET') {
-			$params = ['type' => API_RECORD_TYPE, 'name' => $this->hostname];
-			$url .= '?' . http_build_query($params);
+			$url = $this->endpoint . '?' . http_build_query($params));
 		} else {
+			$url = $this->endpoint;
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
 		}
@@ -38,18 +46,18 @@ class CloudflareClient
 		return json_decode($response);
 	}	
 
-	public function getRecords()
+	public function get($hostname)
 	{
-		return $this->request();
+		$params = ['type' => RECORD_TYPE, 'name' => $hostname]
+		return $this->request('GET', $params);
 	}
 
-	public function createRecord($ip)
+	public function put($record)
 	{
-		$record = ['content' => $ip, 'name' => $this->hostname, 'type' => API_RECORD_TYPE];
 		return $this->request('PUT', $record);
 	}
 
-	public function updateRecord($record)
+	public function post($record)
 	{
 		return $this->request('POST', $record);
 	}
@@ -78,8 +86,8 @@ if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
 // Main
 //
 
-$cf = new CloudflareClient($hostname, $zone, $token);
-$records = $cf->getRecords();
+$api = new DnsRecordsApi($zone, $token);
+$records = $api->get($hostname);
 
 if (!empty($records->errors)) {
 	exit('badauth');
@@ -91,9 +99,10 @@ if (!empty($records->result)) {
 		exit('nochg');
 	}
 	$record->content = $ip;
-	$result = $cf->updateRecord($record);
+	$result = $api->post($record);
 } else {
-	$result = $cf->createRecord($ip);
+	$record = new Record($hostname, $ip);
+	$result = $api->put($record);
 }
 
 exit($result->success? 'good' : 'badagent');
